@@ -35,10 +35,12 @@
     __weak typeof(self) _self = self;
     dispatch_async(dispatch_get_main_queue(), ^{
         __strong typeof(_self) self = _self;
-
+        if (self.doricContext == nil) {
+            return;
+        }
         NSString *viewId = argument[@"id"];
 
-        if (self.doricContext.rootNode.viewId == nil) {
+        if (self.doricContext.rootNode.viewId == nil && [@"Root" isEqualToString:argument[@"type"]]) {
             self.doricContext.rootNode.viewId = viewId;
             [self.doricContext.rootNode blend:argument[@"props"]];
             [self.doricContext.rootNode requestLayout];
@@ -53,6 +55,9 @@
 
 - (void)command:(NSDictionary *)argument withPromise:(DoricPromise *)promise {
     dispatch_async(dispatch_get_main_queue(), ^{
+        if (self.doricContext == nil) {
+            return;
+        }
         NSArray *viewIds = argument[@"viewIds"];
         id args = argument[@"args"];
         NSString *name = argument[@"name"];

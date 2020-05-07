@@ -418,6 +418,12 @@ declare module 'doric/lib/src/widget/text' {
     import { View } from "doric/lib/src/ui/view";
     import { Color } from "doric/lib/src/util/color";
     import { Gravity } from "doric/lib/src/util/gravity";
+    export enum TruncateAt {
+        End = 0,
+        Middle = 1,
+        Start = 2,
+        Clip = 3
+    }
     export class Text extends View {
         text?: string;
         textColor?: Color;
@@ -432,6 +438,7 @@ declare module 'doric/lib/src/widget/text' {
         strikethrough?: boolean;
         underline?: boolean;
         htmlText?: string;
+        truncateAt?: TruncateAt;
     }
     export function text(config: Partial<Text>): Text;
 }
@@ -672,6 +679,7 @@ declare module 'doric/lib/src/widget/input' {
         textAlignment?: Gravity;
         onTextChange?: (text: string) => void;
         onFocusChange?: (focused: boolean) => void;
+        maxLength?: number;
         getText(context: BridgeContext): Promise<string>;
         setSelection(context: BridgeContext, start: number, end?: number): Promise<string>;
         requestFocus(context: BridgeContext): Promise<any>;
@@ -757,6 +765,7 @@ declare module 'doric/lib/src/native/navbar' {
         setBgColor: (color: Color) => Promise<any>;
         setLeft: (view: View) => Promise<any>;
         setRight: (view: View) => Promise<any>;
+        setCenter: (view: View) => Promise<any>;
     };
 }
 
@@ -788,7 +797,7 @@ declare module 'doric/lib/src/native/network' {
         timeout?: number;
     }
     export interface IResponse {
-        data: any;
+        data: string;
         status: number;
         headers?: {
             [index: string]: string;

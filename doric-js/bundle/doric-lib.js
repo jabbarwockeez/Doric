@@ -701,9 +701,11 @@ function NativeCall(target, propertyKey, descriptor) {
 }
 class Panel {
     constructor() {
+        this.destroyed = false;
         this.__root__ = new Root;
         this.headviews = new Map;
         this.onRenderFinishedCallback = [];
+        this.__rendering__ = false;
     }
     onCreate() { }
     onDestroy() { }
@@ -756,6 +758,7 @@ class Panel {
         this.onCreate();
     }
     __onDestroy__() {
+        this.destroyed = true;
         this.onDestroy();
     }
     __onShow__() {
@@ -818,6 +821,9 @@ class Panel {
         }
     }
     hookAfterNativeCall() {
+        if (this.destroyed) {
+            return;
+        }
         const promises = [];
         if (Environment.platform !== 'web') {
             //Here insert a native call to ensure the promise is resolved done.
@@ -853,9 +859,18 @@ class Panel {
                 }
             });
         }
-        Promise.all(promises).then(_ => {
-            this.onRenderFinished();
-        });
+        if (this.__rendering__) {
+            //skip
+            Promise.all(promises).then(_ => {
+            });
+        }
+        else {
+            this.__rendering__ = true;
+            Promise.all(promises).then(_ => {
+                this.__rendering__ = false;
+                this.onRenderFinished();
+            });
+        }
     }
     onRenderFinished() {
         this.onRenderFinishedCallback.forEach(e => {
@@ -1208,6 +1223,12 @@ var __decorate$3 = (undefined && undefined.__decorate) || function (decorators, 
 var __metadata$3 = (undefined && undefined.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+(function (TruncateAt) {
+    TruncateAt[TruncateAt["End"] = 0] = "End";
+    TruncateAt[TruncateAt["Middle"] = 1] = "Middle";
+    TruncateAt[TruncateAt["Start"] = 2] = "Start";
+    TruncateAt[TruncateAt["Clip"] = 3] = "Clip";
+})(exports.TruncateAt || (exports.TruncateAt = {}));
 class Text extends View {
 }
 __decorate$3([
@@ -1262,6 +1283,10 @@ __decorate$3([
     Property,
     __metadata$3("design:type", String)
 ], Text.prototype, "htmlText", void 0);
+__decorate$3([
+    Property,
+    __metadata$3("design:type", Number)
+], Text.prototype, "truncateAt", void 0);
 function text(config) {
     const ret = new Text;
     ret.layoutConfig = layoutConfig().fit();
@@ -1973,6 +1998,10 @@ __decorate$a([
     Property,
     __metadata$a("design:type", Function)
 ], Input.prototype, "onFocusChange", void 0);
+__decorate$a([
+    Property,
+    __metadata$a("design:type", Number)
+], Input.prototype, "maxLength", void 0);
 function input(config) {
     const ret = new Input;
     ret.layoutConfig = layoutConfig().just();
@@ -2145,7 +2174,14 @@ function navbar(context) {
                 panel.addHeadView("navbar_right", view);
             }
             return context.callNative('navbar', 'setRight', view.toModel());
-        }
+        },
+        setCenter: (view) => {
+            if (panel) {
+                panel.clearHeadViews("navbar_center");
+                panel.addHeadView("navbar_center", view);
+            }
+            return context.callNative('navbar', 'setCenter', view.toModel());
+        },
     };
 }
 

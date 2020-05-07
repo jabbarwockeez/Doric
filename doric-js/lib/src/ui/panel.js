@@ -35,9 +35,11 @@ export function NativeCall(target, propertyKey, descriptor) {
 }
 export class Panel {
     constructor() {
+        this.destroyed = false;
         this.__root__ = new Root;
         this.headviews = new Map;
         this.onRenderFinishedCallback = [];
+        this.__rendering__ = false;
     }
     onCreate() { }
     onDestroy() { }
@@ -90,6 +92,7 @@ export class Panel {
         this.onCreate();
     }
     __onDestroy__() {
+        this.destroyed = true;
         this.onDestroy();
     }
     __onShow__() {
@@ -152,6 +155,9 @@ export class Panel {
         }
     }
     hookAfterNativeCall() {
+        if (this.destroyed) {
+            return;
+        }
         const promises = [];
         if (Environment.platform !== 'web') {
             //Here insert a native call to ensure the promise is resolved done.
@@ -187,9 +193,18 @@ export class Panel {
                 }
             });
         }
-        Promise.all(promises).then(_ => {
-            this.onRenderFinished();
-        });
+        if (this.__rendering__) {
+            //skip
+            Promise.all(promises).then(_ => {
+            });
+        }
+        else {
+            this.__rendering__ = true;
+            Promise.all(promises).then(_ => {
+                this.__rendering__ = false;
+                this.onRenderFinished();
+            });
+        }
     }
     onRenderFinished() {
         this.onRenderFinishedCallback.forEach(e => {

@@ -33,6 +33,7 @@ type Frame = { width: number, height: number }
 declare function nativeEmpty(): void
 
 export abstract class Panel {
+    private destroyed = false
     context!: BridgeContext
     onCreate() { }
     onDestroy() { }
@@ -46,6 +47,8 @@ export abstract class Panel {
     private headviews: Map<string, Map<string, View>> = new Map
 
     private onRenderFinishedCallback: Array<() => void> = []
+
+    private __rendering__ = false
 
     addHeadView(type: string, v: View) {
         let map = this.headviews.get(type)
@@ -101,6 +104,7 @@ export abstract class Panel {
 
     @NativeCall
     private __onDestroy__() {
+        this.destroyed = true
         this.onDestroy()
     }
 
@@ -173,6 +177,9 @@ export abstract class Panel {
     }
 
     private hookAfterNativeCall() {
+        if (this.destroyed) {
+            return
+        }
         const promises: Promise<any>[] = []
         if (Environment.platform !== 'web') {
             //Here insert a native call to ensure the promise is resolved done.
@@ -207,9 +214,17 @@ export abstract class Panel {
                 }
             })
         }
-        Promise.all(promises).then(_ => {
-            this.onRenderFinished()
-        })
+        if (this.__rendering__) {
+            //skip
+            Promise.all(promises).then(_ => {
+            })
+        } else {
+            this.__rendering__ = true
+            Promise.all(promises).then(_ => {
+                this.__rendering__ = false
+                this.onRenderFinished()
+            })
+        }
     }
     private onRenderFinished() {
         this.onRenderFinishedCallback.forEach(e => {

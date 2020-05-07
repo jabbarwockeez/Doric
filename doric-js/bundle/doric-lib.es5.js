@@ -946,9 +946,11 @@ function NativeCall(target, propertyKey, descriptor) {
 }
 var Panel = /** @class */ (function () {
     function Panel() {
+        this.destroyed = false;
         this.__root__ = new Root;
         this.headviews = new Map;
         this.onRenderFinishedCallback = [];
+        this.__rendering__ = false;
     }
     Panel.prototype.onCreate = function () { };
     Panel.prototype.onDestroy = function () { };
@@ -1001,6 +1003,7 @@ var Panel = /** @class */ (function () {
         this.onCreate();
     };
     Panel.prototype.__onDestroy__ = function () {
+        this.destroyed = true;
         this.onDestroy();
     };
     Panel.prototype.__onShow__ = function () {
@@ -1100,6 +1103,9 @@ var Panel = /** @class */ (function () {
     Panel.prototype.hookAfterNativeCall = function () {
         var e_4, _a, e_5, _b;
         var _this = this;
+        if (this.destroyed) {
+            return;
+        }
         var promises = [];
         if (Environment.platform !== 'web') {
             //Here insert a native call to ensure the promise is resolved done.
@@ -1176,9 +1182,18 @@ var Panel = /** @class */ (function () {
                 }
             });
         }
-        Promise.all(promises).then(function (_) {
-            _this.onRenderFinished();
-        });
+        if (this.__rendering__) {
+            //skip
+            Promise.all(promises).then(function (_) {
+            });
+        }
+        else {
+            this.__rendering__ = true;
+            Promise.all(promises).then(function (_) {
+                _this.__rendering__ = false;
+                _this.onRenderFinished();
+            });
+        }
     };
     Panel.prototype.onRenderFinished = function () {
         this.onRenderFinishedCallback.forEach(function (e) {
@@ -1637,6 +1652,12 @@ var __decorate$3 = (undefined && undefined.__decorate) || function (decorators, 
 var __metadata$3 = (undefined && undefined.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") { return Reflect.metadata(k, v); }
 };
+(function (TruncateAt) {
+    TruncateAt[TruncateAt["End"] = 0] = "End";
+    TruncateAt[TruncateAt["Middle"] = 1] = "Middle";
+    TruncateAt[TruncateAt["Start"] = 2] = "Start";
+    TruncateAt[TruncateAt["Clip"] = 3] = "Clip";
+})(exports.TruncateAt || (exports.TruncateAt = {}));
 var Text = /** @class */ (function (_super) {
     __extends$3(Text, _super);
     function Text() {
@@ -1694,6 +1715,10 @@ var Text = /** @class */ (function (_super) {
         Property,
         __metadata$3("design:type", String)
     ], Text.prototype, "htmlText", void 0);
+    __decorate$3([
+        Property,
+        __metadata$3("design:type", Number)
+    ], Text.prototype, "truncateAt", void 0);
     return Text;
 }(View));
 function text(config) {
@@ -2590,6 +2615,10 @@ var Input = /** @class */ (function (_super) {
         Property,
         __metadata$a("design:type", Function)
     ], Input.prototype, "onFocusChange", void 0);
+    __decorate$a([
+        Property,
+        __metadata$a("design:type", Number)
+    ], Input.prototype, "maxLength", void 0);
     return Input;
 }(View));
 function input(config) {
@@ -2820,7 +2849,14 @@ function navbar(context) {
                 panel.addHeadView("navbar_right", view);
             }
             return context.callNative('navbar', 'setRight', view.toModel());
-        }
+        },
+        setCenter: function (view) {
+            if (panel) {
+                panel.clearHeadViews("navbar_center");
+                panel.addHeadView("navbar_center", view);
+            }
+            return context.callNative('navbar', 'setCenter', view.toModel());
+        },
     };
 }
 

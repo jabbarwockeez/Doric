@@ -49,7 +49,7 @@
 @implementation DoricTextNode
 - (UILabel *)build {
     return [[[DoricTextView alloc] init] also:^(DoricTextView *it) {
-        it.textAlignment = NSTextAlignmentCenter;
+        [self ensureParagraphStyle];
     }];
 }
 
@@ -78,7 +78,7 @@
         }
         if (self.paragraphStyle) {
             self.paragraphStyle.alignment = alignment;
-            NSMutableAttributedString *attributedString = [[NSMutableAttributedString alloc] initWithString:view.text];
+            NSMutableAttributedString *attributedString = [[NSMutableAttributedString alloc] initWithString:view.text ?: @""];
             [attributedString addAttribute:NSParagraphStyleAttributeName value:self.paragraphStyle range:NSMakeRange(0, [attributedString length])];
             view.attributedText = attributedString;
         } else {
@@ -133,6 +133,27 @@
                                                            documentAttributes:nil
                                                                         error:nil];
         view.attributedText = attStr;
+    } else if ([name isEqualToString:@"truncateAt"]) {
+        [prop also:^(NSNumber *truncateAt) {
+            [[self ensureParagraphStyle] also:^(NSMutableParagraphStyle *it) {
+                switch (truncateAt.integerValue) {
+                    case 1:
+                        it.lineBreakMode = NSLineBreakByTruncatingMiddle;
+                        break;
+                    case 2:
+                        it.lineBreakMode = NSLineBreakByTruncatingHead;
+                        break;
+                    case 3:
+                        it.lineBreakMode = NSLineBreakByClipping;
+                        break;
+                    default:
+                        it.lineBreakMode = NSLineBreakByTruncatingTail;
+                        break;
+                }
+                [self reloadParagraphStyle];
+            }];
+        }];
+
     } else {
         [super blendView:view forPropName:name propValue:prop];
     }
@@ -141,7 +162,8 @@
 - (NSMutableParagraphStyle *)ensureParagraphStyle {
     if (self.paragraphStyle == nil) {
         self.paragraphStyle = [NSMutableParagraphStyle new];
-        self.paragraphStyle.alignment = self.view.textAlignment;
+        self.paragraphStyle.alignment = NSTextAlignmentCenter;
+        self.paragraphStyle.lineBreakMode = NSLineBreakByTruncatingTail;
     }
     return self.paragraphStyle;
 }
